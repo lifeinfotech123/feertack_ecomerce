@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import 'package:shop/components/skleton/others/discover_categories_skelton.dart';
 import 'package:shop/constants.dart';
+import 'package:shop/controllers/categories_controller.dart';
 import 'package:shop/route/screen_export.dart';
+import 'package:shop/screens/home/views/components/sub_category.dart';
 
 import '../models/category_data.dart';
 import 'components/category_content_view.dart';
@@ -15,14 +19,19 @@ class DiscoverScreen extends StatefulWidget {
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
-  // Default to Beauty & Health (index 7) to match the reference screenshot initially
-  int _selectedCategoryIndex = 7;
+  late final CategoriesController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<CategoriesController>()
+        ? Get.find<CategoriesController>()
+        : Get.put(CategoriesController());
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categories = demoDiscoverCategories;
-    final selectedCategory = categories[_selectedCategoryIndex.clamp(0, categories.length - 1)];
 
     final sidebarBg = isDark ? const Color(0xFF14141C) : const Color(0xFFF7F7F9);
     final contentBg = isDark ? const Color(0xFF1A1A24) : Colors.white;
@@ -126,49 +135,74 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ],
       ),
       body: SafeArea(
-        child: Row(
-          children: [
-            // Left Sidebar (Categories)
-            Container(
-              width: 90,
-              decoration: BoxDecoration(
-                color: sidebarBg,
-                border: Border(
-                  right: BorderSide(
-                    color: dividerColor,
-                    width: 0.9,
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return const DiscoverCategoriesSkelton();
+          }
+
+          final categories = controller.categories;
+          final useApi = categories.isNotEmpty;
+
+          return Row(
+            children: [
+              // Left Sidebar (Categories)
+              Container(
+                width: 90,
+                decoration: BoxDecoration(
+                  color: sidebarBg,
+                  border: Border(
+                    right: BorderSide(
+                      color: dividerColor,
+                      width: 0.9,
+                    ),
+                  ),
+                ),
+                child: ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: useApi ? categories.length : demoDiscoverCategories.length,
+                  itemBuilder: (context, index) {
+                    final isSelected = index == controller.selectedIndex.value;
+
+                    if (useApi) {
+                      return CategorySidebarItem(
+                        categoryModel: categories[index],
+                        isSelected: isSelected,
+                        onTap: () {
+                          controller.selectCategory(index);
+                        },
+                      );
+                    } else {
+                      return CategorySidebarItem(
+                        category: demoDiscoverCategories[index],
+                        isSelected: isSelected,
+                        onTap: () {
+                          controller.selectCategory(index);
+                        },
+                      );
+                    }
+                  },
+                ),
+              ),
+
+              // Right Pane (Subcategories & Sections)
+              Expanded(
+                child: Container(
+                  color: contentBg,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(vertical: defaultPadding / 2),
+                    child: useApi
+                        ? const Sub_category()
+                        : CategoryContentView(
+                            category: demoDiscoverCategories[
+                                controller.selectedIndex.value.clamp(0, demoDiscoverCategories.length - 1)],
+                          ),
                   ),
                 ),
               ),
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  return CategorySidebarItem(
-                    category: categories[index],
-                    isSelected: index == _selectedCategoryIndex,
-                    onTap: () {
-                      setState(() {
-                        _selectedCategoryIndex = index;
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-
-            // Right Pane (Subcategories & Sections)
-            Expanded(
-              child: Container(
-                color: contentBg,
-                child: CategoryContentView(
-                  key: ValueKey(selectedCategory.id),
-                  category: selectedCategory,
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          );
+        }),
       ),
     );
   }

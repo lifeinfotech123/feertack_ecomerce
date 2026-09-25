@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 
+// API Config
+const String baseUrl = "https://enjoyc.lifeinfotechinstitute.com/api/v4/";
+const String categoriesEndpoint = "categories";
+
 // Just for demo
 const productDemoImg1 = "https://i.imgur.com/CGCyp1d.png";
 const productDemoImg2 = "https://i.imgur.com/AkzWQuJ.png";

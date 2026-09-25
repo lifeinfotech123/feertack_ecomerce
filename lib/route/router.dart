@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shop/entry_point.dart';
 import 'package:shop/models/product_model.dart';
 
+import '../screens/address/presentation/views/addresses_screen.dart';
 import 'screen_export.dart';
 
 // Yuo will get 50+ screens and more once you have the full template

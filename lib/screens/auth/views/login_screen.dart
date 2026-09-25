@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shop/constants.dart';
 import 'package:shop/route/route_constants.dart';
-
 import 'components/login_form.dart';
 
 class LoginScreen extends StatefulWidget {
+
   const LoginScreen({super.key});
 
   @override
@@ -12,10 +12,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
+
     final Size size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -35,7 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     "Welcome back!",
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
+
                   const SizedBox(height: defaultPadding / 2),
+
                   const Text(
                     "Log in with your data that you intered during your registration.",
                   ),

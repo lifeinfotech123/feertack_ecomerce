@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shop/components/network_image_with_loader.dart';
 import 'package:shop/components/top_brands_slider.dart';
+import 'package:shop/controllers/cart_controller.dart';
 import '../components/instant_product_card.dart';
 import 'package:shop/constants.dart';
 import 'package:shop/route/route_constants.dart';
@@ -27,6 +28,90 @@ class _HomePageState extends State<InstantProduct> {
 
     return Scaffold(
       backgroundColor: isDark ? blackColor : const Color(0xFFF7F7FA),
+      bottomNavigationBar: ListenableBuilder(
+        listenable: CartController.instance,
+        builder: (context, child) {
+          final cart = CartController.instance;
+          if (cart.totalItemCount == 0) return const SizedBox.shrink();
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(context, cartScreenRoute);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B5E20),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              "${cart.totalItemCount} ITEM${cart.totalItemCount > 1 ? 'S' : ''}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "₹${cart.subtotal.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Row(
+                        children: [
+                          Text(
+                            "View Cart",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: 13,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),

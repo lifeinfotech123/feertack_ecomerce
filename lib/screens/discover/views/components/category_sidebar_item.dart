@@ -1,18 +1,44 @@
 import 'package:flutter/material.dart';
+import '../../../../models/category_model.dart';
 import '../../models/category_data.dart';
 import 'category_hd_image.dart';
 
 class CategorySidebarItem extends StatelessWidget {
-  final MainCategory category;
+  final MainCategory? category;
+  final CategoryModel? categoryModel;
+  final String? title;
+  final String? image;
+  final IconData? fallbackIcon;
   final bool isSelected;
   final VoidCallback onTap;
 
   const CategorySidebarItem({
     super.key,
-    required this.category,
+    this.category,
+    this.categoryModel,
+    this.title,
+    this.image,
+    this.fallbackIcon,
     required this.isSelected,
     required this.onTap,
   });
+
+  String get displayTitle =>
+      categoryModel?.name ??
+      categoryModel?.title ??
+      category?.title ??
+      title ??
+      '';
+
+  String get displayImage =>
+      categoryModel?.icon ??
+      categoryModel?.image ??
+      category?.image ??
+      image ??
+      '';
+
+  IconData get displayFallbackIcon =>
+      category?.fallbackIcon ?? fallbackIcon ?? Icons.category_outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -80,9 +106,9 @@ class CategorySidebarItem extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(2),
                       child: CategoryHdImage(
-                        imageUrl: category.image,
+                        imageUrl: displayImage,
                         isCircle: true,
-                        fallbackIcon: category.fallbackIcon ?? Icons.category_outlined,
+                        fallbackIcon: displayFallbackIcon,
                       ),
                     ),
                   ),
@@ -90,7 +116,7 @@ class CategorySidebarItem extends StatelessWidget {
 
                   // Category title
                   Text(
-                    category.title,
+                    displayTitle,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

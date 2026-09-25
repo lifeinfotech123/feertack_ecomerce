@@ -1,73 +1,66 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:shop/route/screen_export.dart';
+import 'package:get/get.dart';
 
+import '../../../../components/skleton/others/categories_skelton.dart';
 import '../../../../constants.dart';
+import '../../../../controllers/categories_controller.dart';
+import '../../../../models/category_model.dart';
 
-class CategoryModel {
-  final String name;
-  final String? svgSrc, route;
-
-  CategoryModel({
-    required this.name,
-    this.svgSrc,
-    this.route,
-  });
-}
-
-List<CategoryModel> demoCategories = [
-  CategoryModel(name: "All Categories"),
-  CategoryModel(
-      name: "On Sale",
-      svgSrc: "assets/icons/Sale.svg",
-      route: onSaleScreenRoute),
-  CategoryModel(name: "Woman’s", svgSrc: "assets/icons/Woman.svg"),
-  CategoryModel(name: "Man's", svgSrc: "assets/icons/Man.svg"),
-  CategoryModel(
-      name: "Kids", svgSrc: "assets/icons/Child.svg", route: kidsScreenRoute),
-  CategoryModel(name: "Accessories", svgSrc: "assets/icons/Accessories.svg"),
-];
-
-class Categories extends StatefulWidget {
+class Categories extends StatelessWidget {
   const Categories({super.key});
 
   @override
-  State<Categories> createState() => _CategoriesState();
-}
-
-class _CategoriesState extends State<Categories> {
-  int _selectedIndex = 0;
-
-  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(
-          demoCategories.length,
-          (index) => Padding(
-            padding: EdgeInsets.only(
-              left: index == 0 ? defaultPadding : defaultPadding / 2,
-              right: index == demoCategories.length - 1 ? defaultPadding : 0,
-            ),
-            child: CategoryBtn(
-              category: demoCategories[index].name,
-              svgSrc: demoCategories[index].svgSrc,
-              isActive: index == _selectedIndex,
-              press: () {
-                setState(() {
-                  _selectedIndex = index;
-                });
-                if (demoCategories[index].route != null) {
-                  Navigator.pushNamed(context, demoCategories[index].route!);
-                }
-              },
-            ),
+    final CategoriesController controller = Get.put(CategoriesController());
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const CategoriesSkelton();
+      }
+
+      final categoriesList = controller.categories.isNotEmpty
+          ? controller.categories
+          : demoCategories;
+
+      if (categoriesList.isEmpty) {
+        return const SizedBox();
+      }
+
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(
+            categoriesList.length,
+            (index) {
+              final category = categoriesList[index];
+              final isActive = index == controller.selectedIndex.value;
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? defaultPadding : defaultPadding / 2,
+                  right: index == categoriesList.length - 1 ? defaultPadding : 0,
+                ),
+                child: CategoryBtn(
+                  category: category.name,
+                  svgSrc: category.svgSrc,
+                  icon: category.icon,
+                  isActive: isActive,
+                  press: () {
+                    controller.selectCategory(index);
+                    if (category.route != null) {
+                      Navigator.pushNamed(context, category.route!);
+                    }
+                  },
+                ),
+              );
+            },
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -76,12 +69,14 @@ class CategoryBtn extends StatelessWidget {
     super.key,
     required this.category,
     this.svgSrc,
+    this.icon,
     required this.isActive,
     required this.press,
   });
 
   final String category;
   final String? svgSrc;
+  final String? icon;
   final bool isActive;
   final VoidCallback press;
 
@@ -127,7 +122,25 @@ class CategoryBtn extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (svgSrc != null) ...[
+            if (icon != null && icon!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: CachedNetworkImage(
+                  imageUrl: icon!,
+                  height: 18,
+                  width: 18,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => Icon(
+                    Icons.category_outlined,
+                    size: 18,
+                    color: isActive
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : const Color(0xFF42424E)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ] else if (svgSrc != null) ...[
               SvgPicture.asset(
                 svgSrc!,
                 height: 18,
