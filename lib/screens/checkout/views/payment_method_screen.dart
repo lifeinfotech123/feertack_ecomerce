@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
 import 'package:shop/components/network_image_with_loader.dart';
 import 'package:shop/constants.dart';
 import 'package:shop/controllers/cart_controller.dart';
+import 'package:shop/controllers/order_controller.dart';
+import 'package:shop/models/address_model.dart';
 import 'package:shop/route/route_constants.dart';
 
 enum PaymentType { upi, bankCard, netBanking, cod }
@@ -16,12 +19,14 @@ class PaymentMethodScreen extends StatefulWidget {
 
 class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   final CartController _cart = CartController.instance;
+  late final OrderController _orderController;
 
-  PaymentType _selectedPaymentType = PaymentType.upi;
+  PaymentType _selectedPaymentType = PaymentType.cod;
   String _selectedUpiApp = "Google Pay";
   String _selectedBank = "HDFC Bank";
   bool _isProcessing = false;
   bool _showItemsSummary = false;
+  int? _selectedAddressId;
 
   final TextEditingController _upiIdController = TextEditingController();
   final TextEditingController _cardNumberController =
@@ -60,6 +65,16 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _orderController = Get.isRegistered<OrderController>()
+        ? Get.find<OrderController>()
+        : Get.put(OrderController());
+
+    _orderController.fetchCheckoutSummary();
+  }
+
+  @override
   void dispose() {
     _upiIdController.dispose();
     _cardNumberController.dispose();
@@ -70,12 +85,19 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   }
 
   void _processPayment() async {
+    final summaryData = _orderController.checkoutSummary.value;
+    int addressId = _selectedAddressId ?? 26;
+
+    if (summaryData != null && summaryData.savedAddresses.isNotEmpty) {
+      _selectedAddressId ??= summaryData.savedAddresses.first.id;
+      addressId = _selectedAddressId!;
+    }
+
     setState(() {
       _isProcessing = true;
     });
 
-    // Simulate payment gateway verification
-    await Future.delayed(const Duration(milliseconds: 1400));
+    final success = await _orderController.placeOrder(addressId: addressId);
 
     if (!mounted) return;
 
@@ -83,39 +105,38 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       _isProcessing = false;
     });
 
-    String paymentSummary = "";
-    switch (_selectedPaymentType) {
-      case PaymentType.upi:
-        paymentSummary = "UPI ($_selectedUpiApp)";
-        break;
-      case PaymentType.bankCard:
-        paymentSummary = "Bank Card (${_cardNumberController.text.trim()})";
-        break;
-      case PaymentType.netBanking:
-        paymentSummary = "Net Banking ($_selectedBank)";
-        break;
-      case PaymentType.cod:
-        paymentSummary = "Cash on Delivery";
-        break;
+    if (success) {
+      final result = _orderController.lastPlacedOrder.value;
+      final double paidTotal = result?.orderAmount ?? _cart.grandTotal;
+      final double savedTotal = _cart.totalSavings;
+      final int itemsCount = _cart.totalItemCount;
+
+      _cart.clearCart();
+
+      Navigator.pushReplacementNamed(
+        context,
+        thanksForOrderScreenRoute,
+        arguments: {
+          "paymentMethod": result?.paymentMethod ?? "Cash on Delivery",
+          "amount": paidTotal,
+          "savings": savedTotal,
+          "itemsCount": itemsCount,
+          "orderId": result?.orderId,
+          "formattedAmount": result?.formattedAmount,
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _orderController.errorMessage.value.isNotEmpty
+                ? _orderController.errorMessage.value
+                : "Failed to place order. Please try again.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-
-    final double paidTotal = _cart.grandTotal;
-    final double savedTotal = _cart.totalSavings;
-    final int itemsCount = _cart.totalItemCount;
-
-    // Clear cart once order is verified
-    _cart.clearCart();
-
-    Navigator.pushReplacementNamed(
-      context,
-      thanksForOrderScreenRoute,
-      arguments: {
-        "paymentMethod": paymentSummary,
-        "amount": paidTotal,
-        "savings": savedTotal,
-        "itemsCount": itemsCount,
-      },
-    );
   }
 
   Widget _buildPaymentHeader({
@@ -168,14 +189,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     final cardBg = isDark ? darkGreyColor : whiteColor;
     final bodyBg = isDark ? const Color(0xFF121218) : const Color(0xFFF6F6F9);
 
-    final items = _cart.items;
-    final subtotal = _cart.subtotal;
-    final deliveryFee = _cart.deliveryFee;
-    final discountAmount = _cart.discountAmount;
-    final appliedCoupon = _cart.appliedCoupon;
-    final grandTotal = _cart.grandTotal;
-    final savings = _cart.totalSavings;
-
     return Scaffold(
       backgroundColor: bodyBg,
       appBar: AppBar(
@@ -195,193 +208,226 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         ),
         centerTitle: false,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Delivery Address Card
-            _buildDeliveryAddressCard(cardBg, isDark),
+      body: Obx(() {
+        final summary = _orderController.checkoutSummary.value?.summary;
+        final savedAddresses =
+            _orderController.checkoutSummary.value?.savedAddresses ?? [];
 
-            const SizedBox(height: defaultPadding),
+        if (_selectedAddressId == null && savedAddresses.isNotEmpty) {
+          _selectedAddressId = savedAddresses.first.id;
+        }
 
-            // 2. Order Items Collapsible Card
-            _buildOrderItemsCard(cardBg, isDark, items),
+        final subtotal = summary?.subtotal ?? _cart.subtotal;
+        final shippingCost = summary?.shippingCost ?? _cart.deliveryFee;
+        final discountAmount = summary?.totalDiscount ?? _cart.discountAmount;
+        final grandTotal = summary?.grandTotal ?? _cart.grandTotal;
+        final savings = _cart.totalSavings;
 
-            const SizedBox(height: defaultPadding),
-
-            // 3. Payment Methods Section Title
-            Row(
-              children: [
-                const Icon(
-                  Icons.lock_outline_rounded,
-                  color: primaryColor,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Choose Payment Method",
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: successColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.shield_rounded, size: 12, color: successColor),
-                      SizedBox(width: 4),
-                      Text(
-                        "100% SECURE",
-                        style: TextStyle(
-                          color: successColor,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // 4. Payment Option 1: UPI
-            _buildUpiPaymentOption(cardBg, isDark),
-
-            const SizedBox(height: 10),
-
-            // 5. Payment Option 2: Bank Cards (Credit/Debit)
-            _buildBankCardPaymentOption(cardBg, isDark),
-
-            const SizedBox(height: 10),
-
-            // 6. Payment Option 3: Net Banking
-            _buildNetBankingOption(cardBg, isDark),
-
-            const SizedBox(height: 10),
-
-            // 7. Payment Option 4: Cash On Delivery
-            _buildCodOption(cardBg, isDark),
-
-            const SizedBox(height: defaultPadding * 1.2),
-
-            // 8. Full Bill Details Breakdown ("sara bil dekha de")
-            _buildDetailedBillCard(
-              cardBg: cardBg,
-              isDark: isDark,
-              subtotal: subtotal,
-              deliveryFee: deliveryFee,
-              discountAmount: discountAmount,
-              appliedCouponCode: appliedCoupon?.code,
-              isFreeDeliveryCoupon: appliedCoupon?.isFreeDelivery ?? false,
-              grandTotal: grandTotal,
-              savings: savings,
-            ),
-
-            const SizedBox(height: defaultPadding * 2),
-          ],
-        ),
-      ),
-
-      // Bottom Sticky Pay Button
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: defaultPadding,
-          vertical: defaultPadding * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: cardBg,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(defaultPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 1. Delivery Address Card / Address Selector
+              _buildDeliveryAddressSection(cardBg, isDark, savedAddresses),
+
+              const SizedBox(height: defaultPadding),
+
+              // 2. Order Items Collapsible Card
+              _buildOrderItemsCard(cardBg, isDark, _cart.items),
+
+              const SizedBox(height: defaultPadding),
+
+              // 3. Payment Methods Section Title
+              Row(
                 children: [
-                  const Text(
-                    "Total To Pay",
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: greyColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    color: primaryColor,
+                    size: 18,
                   ),
+                  const SizedBox(width: 8),
                   Text(
-                    "\$${grandTotal.toStringAsFixed(2)}",
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      color: primaryColor,
+                    "Choose Payment Method",
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: successColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.shield_rounded,
+                            size: 12, color: successColor),
+                        SizedBox(width: 4),
+                        Text(
+                          "100% SECURE",
+                          style: TextStyle(
+                            color: successColor,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: defaultPadding),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isProcessing ? null : _processPayment,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(defaultBorderRadious),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isProcessing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.lock_rounded,
-                                size: 16, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Text(
-                              "PAY \$${grandTotal.toStringAsFixed(2)}",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
+              const SizedBox(height: 12),
+
+              // 4. Payment Option 1: Cash On Delivery
+              _buildCodOption(cardBg, isDark),
+
+              const SizedBox(height: 10),
+
+              // 5. Payment Option 2: UPI
+              _buildUpiPaymentOption(cardBg, isDark),
+
+              const SizedBox(height: 10),
+
+              // 6. Payment Option 3: Bank Cards
+              _buildBankCardPaymentOption(cardBg, isDark),
+
+              const SizedBox(height: 10),
+
+              // 7. Payment Option 4: Net Banking
+              _buildNetBankingOption(cardBg, isDark),
+
+              const SizedBox(height: defaultPadding * 1.2),
+
+              // 8. Bill Details Summary Card
+              _buildDetailedBillCard(
+                cardBg: cardBg,
+                isDark: isDark,
+                subtotal: subtotal,
+                deliveryFee: shippingCost,
+                discountAmount: discountAmount,
+                appliedCouponCode: _cart.appliedCoupon?.code,
+                isFreeDeliveryCoupon:
+                    _cart.appliedCoupon?.isFreeDelivery ?? false,
+                grandTotal: grandTotal,
+                savings: savings,
+              ),
+
+              const SizedBox(height: defaultPadding * 2),
+            ],
+          ),
+        );
+      }),
+
+      // Bottom Sticky Pay Button
+      bottomNavigationBar: Obx(() {
+        final summary = _orderController.checkoutSummary.value?.summary;
+        final grandTotal = summary?.grandTotal ?? _cart.grandTotal;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: defaultPadding,
+            vertical: defaultPadding * 0.75,
+          ),
+          decoration: BoxDecoration(
+            color: cardBg,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
-        ),
-      ),
+          child: SafeArea(
+            child: Row(
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Total To Pay",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: greyColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      "\$${grandTotal.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: defaultPadding),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isProcessing ? null : _processPayment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(defaultBorderRadious),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isProcessing
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.lock_rounded,
+                                  size: 16, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                "PLACE ORDER (\$${grandTotal.toStringAsFixed(2)})",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 
-  Widget _buildDeliveryAddressCard(Color cardBg, bool isDark) {
+  Widget _buildDeliveryAddressSection(
+      Color cardBg, bool isDark, List<AddressModel> savedAddresses) {
+    AddressModel? currentAddress;
+    if (savedAddresses.isNotEmpty) {
+      currentAddress = savedAddresses.firstWhere(
+        (a) => a.id == _selectedAddressId,
+        orElse: () => savedAddresses.first,
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -426,20 +472,30 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      "Home (New York, USA)",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : blackColor,
+                    Expanded(
+                      child: Text(
+                        currentAddress != null
+                            ? "${currentAddress.contactPersonName} (${currentAddress.city})"
+                            : "Home (New York, USA)",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : blackColor,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  "⚡ Express 10-15 Mins Delivery",
-                  style: TextStyle(
+                Text(
+                  currentAddress != null
+                      ? "${currentAddress.address}, ${currentAddress.state}"
+                      : "⚡ Express 10-15 Mins Delivery",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     color: Color(0xFF2962FF),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -542,7 +598,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       child: Container(
                         width: 40,
                         height: 40,
-                        color: isDark ? Colors.white10 : const Color(0xFFF6F6F9),
+                        color:
+                            isDark ? Colors.white10 : const Color(0xFFF6F6F9),
                         child: NetworkImageWithLoader(
                           item.product.image,
                           radius: 6,
@@ -631,7 +688,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   const SizedBox(height: 10),
                   const Text(
                     "Select UPI App:",
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -690,14 +748,16 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   const SizedBox(height: 12),
                   const Text(
                     "Or Enter UPI ID:",
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _upiIdController,
                     decoration: InputDecoration(
                       hintText: "username@okhdfcbank / paytm",
-                      hintStyle: const TextStyle(fontSize: 11.5, color: greyColor),
+                      hintStyle:
+                          const TextStyle(fontSize: 11.5, color: greyColor),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
                       filled: true,
@@ -784,7 +844,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 children: [
                   const Divider(height: 1),
                   const SizedBox(height: 10),
-                  // Mock Card Display Container
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -970,7 +1029,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   const SizedBox(height: 10),
                   const Text(
                     "Select Your Bank:",
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   Container(

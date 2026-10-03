@@ -3,6 +3,17 @@ import 'package:form_field_validator/form_field_validator.dart';
 
 // API Config
 const String baseUrl = "https://enjoyc.lifeinfotechinstitute.com/api/v4/";
+const String loginEndpoint = "auth/login";
+const String registerEndpoint = "auth/register";
+const String forgotPasswordEndpoint = "auth/forgot-password";
+const String verifyOtpEndpoint = "auth/verify-otp";
+const String resetPasswordEndpoint = "auth/reset-password";
+const String profileEndpoint = "auth/profile";
+const String updateProfileEndpoint = "customer/update-profile";
+const String addressListEndpoint = "customer/address/list";
+const String addAddressEndpoint = "customer/address/add";
+const String updateAddressEndpoint = "customer/address/update";
+const String addressDetailsEndpoint = "customer/address/";
 const String categoriesEndpoint = "categories";
 const String brandsEndpoint = "brands";
 const String bannersEndpoint = "banners";
@@ -12,6 +23,15 @@ const String flashDealsEndpoint = "flash-deals";
 const String topSellersEndpoint = "top-sellers";
 const String mostPopularProductsEndpoint = "products/most-popular";
 const String newArrivalsProductsEndpoint = "products/new-arrivals";
+const String wishlistEndpoint = "customer/wishlist";
+const String wishlistAddEndpoint = "customer/wishlist/add";
+const String wishlistRemoveEndpoint = "customer/wishlist/remove/";
+const String addToCartEndpoint = "customer/cart/add";
+const String checkoutSummaryEndpoint = "customer/orders/place";
+const String placeOrderEndpoint = "customer/orders/place";
+const String orderListEndpoint = "customer/orders";
+const String orderDetailsEndpoint = "customer/orders/";
+const String orderCancelEndpoint = "customer/order/cancel";
 
 // Just for demo
 const productDemoImg1 = "https://i.imgur.com/CGCyp1d.png";

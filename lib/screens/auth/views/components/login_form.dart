@@ -7,9 +7,13 @@ class LogInForm extends StatelessWidget {
   const LogInForm({
     super.key,
     required this.formKey,
+    this.onSavedEmail,
+    this.onSavedPassword,
   });
 
   final GlobalKey<FormState> formKey;
+  final FormFieldSetter<String>? onSavedEmail;
+  final FormFieldSetter<String>? onSavedPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +22,7 @@ class LogInForm extends StatelessWidget {
       child: Column(
         children: [
           TextFormField(
-            onSaved: (emal) {
-              // Email
-            },
+            onSaved: onSavedEmail,
             validator: emaildValidator.call,
             textInputAction: TextInputAction.next,
             keyboardType: TextInputType.emailAddress,
@@ -46,9 +48,7 @@ class LogInForm extends StatelessWidget {
           ),
           const SizedBox(height: defaultPadding),
           TextFormField(
-            onSaved: (pass) {
-              // Password
-            },
+            onSaved: onSavedPassword,
             validator: passwordValidator.call,
             obscureText: true,
             decoration: InputDecoration(
