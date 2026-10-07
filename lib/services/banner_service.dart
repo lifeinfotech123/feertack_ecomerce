@@ -9,8 +9,21 @@ class BannerService {
 
   BannerService({http.Client? client}) : _client = client ?? http.Client();
 
+  void _logApi(
+      {required Uri uri,
+      required String method,
+      required http.Response response}) {
+    debugPrint('================ API REQUEST ================');
+    debugPrint('Method: $method');
+    debugPrint('URL: $uri');
+    debugPrint('Response Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    debugPrint('=============================================');
+  }
+
   /// Fetch banners by banner_type (e.g., 'main-banner', 'footer-banner')
-  Future<List<BannerModel>> getBanners({String bannerType = 'main-banner'}) async {
+  Future<List<BannerModel>> getBanners(
+      {String bannerType = 'main-banner'}) async {
     final uri = Uri.parse('$baseUrl$bannersEndpoint/$bannerType');
     try {
       final response = await _client.get(
@@ -20,6 +33,7 @@ class BannerService {
           'Content-Type': 'application/json',
         },
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);

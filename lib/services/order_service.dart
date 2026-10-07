@@ -17,6 +17,18 @@ class OrderService {
     };
   }
 
+  void _logApi(
+      {required Uri uri,
+      required String method,
+      required http.Response response}) {
+    debugPrint('================ API REQUEST ================');
+    debugPrint('Method: $method');
+    debugPrint('URL: $uri');
+    debugPrint('Response Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    debugPrint('=============================================');
+  }
+
   /// 1. GET CHECKOUT SUMMARY
   /// Endpoint: api/v4/customer/orders/place (GET)
   Future<Map<String, dynamic>> getCheckoutSummary(
@@ -27,6 +39,7 @@ class OrderService {
         uri,
         headers: _getHeaders(token),
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true) {
@@ -57,6 +70,7 @@ class OrderService {
           'address_id': addressId,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true) {
@@ -81,6 +95,7 @@ class OrderService {
         uri,
         headers: _getHeaders(token),
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true && data['data'] != null) {
@@ -112,6 +127,7 @@ class OrderService {
         uri,
         headers: _getHeaders(token),
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true && data['data'] != null) {
@@ -142,6 +158,7 @@ class OrderService {
           'order_id': orderId,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       return data;

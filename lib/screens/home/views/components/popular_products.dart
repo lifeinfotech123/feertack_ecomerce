@@ -140,6 +140,7 @@ class PopularProducts extends StatelessWidget {
                     right: index == products.length - 1 ? defaultPadding : 0,
                   ),
                   child: ProductCard(
+                    id: productModel.id,
                     image: productModel.image,
                     brandName: productModel.brandName,
                     title: productModel.title,

@@ -15,6 +15,14 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final CartController _cart = CartController.instance;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cart.fetchCartList();
+    });
+  }
+
   void _navigateToCouponScreen() {
     Navigator.pushNamed(context, couponScreenRoute);
   }

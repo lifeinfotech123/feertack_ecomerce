@@ -9,6 +9,18 @@ class CategoryService {
 
   CategoryService({http.Client? client}) : _client = client ?? http.Client();
 
+  void _logApi(
+      {required Uri uri,
+      required String method,
+      required http.Response response}) {
+    debugPrint('================ API REQUEST ================');
+    debugPrint('Method: $method');
+    debugPrint('URL: $uri');
+    debugPrint('Response Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    debugPrint('=============================================');
+  }
+
   /// Fetch all categories
   Future<List<CategoryModel>> getCategories() async {
     final uri = Uri.parse('$baseUrl$categoriesEndpoint');
@@ -20,6 +32,7 @@ class CategoryService {
           'Content-Type': 'application/json',
         },
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -47,6 +60,7 @@ class CategoryService {
           'Content-Type': 'application/json',
         },
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -54,7 +68,8 @@ class CategoryService {
           return CategoryModel.fromJson(data['data']);
         }
       } else {
-        debugPrint('CategoryService getCategoryDetails Error: status ${response.statusCode}');
+        debugPrint(
+            'CategoryService getCategoryDetails Error: status ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('CategoryService getCategoryDetails Exception: $e');

@@ -152,6 +152,7 @@ class NewArrivalsWidgets extends StatelessWidget {
                 final apiItem = products[index];
                 final productModel = apiItem.toProductModel();
                 return ProductCard(
+                  id: productModel.id,
                   image: productModel.image,
                   brandName: productModel.brandName,
                   title: productModel.title,

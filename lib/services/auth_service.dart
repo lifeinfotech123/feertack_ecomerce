@@ -14,6 +14,18 @@ class AuthService {
     'Content-Type': 'application/json',
   };
 
+  void _logApi(
+      {required Uri uri,
+      required String method,
+      required http.Response response}) {
+    debugPrint('================ API REQUEST ================');
+    debugPrint('Method: $method');
+    debugPrint('URL: $uri');
+    debugPrint('Response Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    debugPrint('=============================================');
+  }
+
   /// 1. CUSTOMER LOGIN
   /// Endpoint: api/v4/auth/login
   Future<Map<String, dynamic>> login({
@@ -30,6 +42,7 @@ class AuthService {
           'password': password,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true && data['user'] != null) {
@@ -70,6 +83,7 @@ class AuthService {
           'con_password': confirmPassword,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data['status'] == true && data['user'] != null) {
@@ -99,6 +113,7 @@ class AuthService {
           'identity': identity,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       return data;
@@ -128,6 +143,7 @@ class AuthService {
           'otp': otp,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       return data;
@@ -162,6 +178,7 @@ class AuthService {
           'confirm_password': confirmPassword,
         }),
       );
+      _logApi(uri: uri, method: 'POST', response: response);
 
       final Map<String, dynamic> data = jsonDecode(response.body);
       return data;

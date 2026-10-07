@@ -8,6 +8,7 @@ import '../network_image_with_loader.dart';
 class ProductCard extends StatelessWidget {
   const ProductCard({
     super.key,
+    this.id,
     required this.image,
     required this.brandName,
     required this.title,
@@ -17,6 +18,7 @@ class ProductCard extends StatelessWidget {
     required this.press,
   });
 
+  final int? id;
   final String image, brandName, title;
   final double price;
   final double? priceAfetDiscount;
@@ -223,6 +225,7 @@ class ProductCard extends StatelessWidget {
                           InkWell(
                             onTap: () {
                               final product = ProductModel(
+                                id: id,
                                 image: image,
                                 brandName: brandName,
                                 title: title,

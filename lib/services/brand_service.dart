@@ -9,6 +9,18 @@ class BrandService {
 
   BrandService({http.Client? client}) : _client = client ?? http.Client();
 
+  void _logApi(
+      {required Uri uri,
+      required String method,
+      required http.Response response}) {
+    debugPrint('================ API REQUEST ================');
+    debugPrint('Method: $method');
+    debugPrint('URL: $uri');
+    debugPrint('Response Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    debugPrint('=============================================');
+  }
+
   /// Fetch all brands
   Future<List<BrandModel>> getBrands() async {
     final uri = Uri.parse('$baseUrl$brandsEndpoint');
@@ -20,6 +32,7 @@ class BrandService {
           'Content-Type': 'application/json',
         },
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -47,6 +60,7 @@ class BrandService {
           'Content-Type': 'application/json',
         },
       );
+      _logApi(uri: uri, method: 'GET', response: response);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -54,7 +68,8 @@ class BrandService {
           return BrandDetailModel.fromJson(data['data']);
         }
       } else {
-        debugPrint('BrandService getBrandDetails Error: status ${response.statusCode}');
+        debugPrint(
+            'BrandService getBrandDetails Error: status ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('BrandService getBrandDetails Exception: $e');

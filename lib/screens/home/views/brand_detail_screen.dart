@@ -387,6 +387,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                           (context, index) {
                             final product = filteredProducts[index];
                             return ProductCard(
+                              id: product.id,
                               image: product.thumbnail ?? productDemoImg1,
                               brandName: detail.brand.name,
                               title: product.name,
@@ -398,6 +399,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                               dicountpercent: product.discountPercent,
                               press: () {
                                 final productModel = ProductModel(
+                                  id: product.id,
                                   image: product.thumbnail ?? productDemoImg1,
                                   brandName: detail.brand.name,
                                   title: product.name,

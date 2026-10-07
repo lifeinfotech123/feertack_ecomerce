@@ -12,6 +12,7 @@ import 'components/profile_card.dart';
 import 'components/profile_menu_item_list_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
+
   const ProfileScreen({super.key});
 
   @override

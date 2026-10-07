@@ -1,0 +1,53 @@
+
+  workflows:
+    android-internal:
+      name: Android Internal Testing
+
+      instance_type: mac_mini_m2
+
+      environment:
+        flutter: stable
+
+        android_signing:
+          - android_keystore
+
+        vars:
+          PACKAGE_NAME: "YOUR_PACKAGE_NAME"
+
+      triggering:
+        events:
+          - push
+        branch_patterns:
+          - pattern: main
+            include: true
+            source: true
+
+      scripts:
+
+        - name: Get Flutter packages
+          script: |
+            flutter pub get
+
+        - name: Check Flutter version
+          script: |
+            flutter --version
+
+        - name: Analyze Flutter project
+          script: |
+            flutter analyze
+
+        - name: Run Flutter tests
+          script: |
+            flutter test
+
+        - name: Build Android App Bundle
+          script: |
+            flutter build appbundle --release
+
+      artifacts:
+        - build/app/outputs/bundle/release/*.aab
+
+      publishing:
+        google_play:
+          credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+          track: internal

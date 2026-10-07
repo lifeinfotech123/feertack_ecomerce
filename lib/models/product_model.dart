@@ -2,12 +2,14 @@
 import 'package:shop/constants.dart';
 
 class ProductModel {
+  final int? id;
   final String image, brandName, title;
   final double price;
   final double? priceAfetDiscount;
   final int? dicountpercent;
 
   ProductModel({
+    this.id,
     required this.image,
     required this.brandName,
     required this.title,

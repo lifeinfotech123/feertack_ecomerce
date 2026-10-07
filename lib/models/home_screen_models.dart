@@ -80,6 +80,7 @@ class ApiProductModel {
             (discountPercent != null && discountPercent! > 0);
 
     return ProductModel(
+      id: id,
       image: (thumbnail != null && thumbnail!.isNotEmpty)
           ? thumbnail!
           : productDemoImg1,
